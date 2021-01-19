@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="8c0dd362-f721-4ae2-b37a-0cf9721e58ff" >
+		<jms:active-mq-connection username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
+	<flow name="finalFlow" doc:id="82d6e1ea-ae09-4e3a-a476-2fd6dee106e8" >
+		<http:listener doc:name="Listener" doc:id="c79cdee3-803c-434a-976b-fa39508570ba" config-ref="HTTP_Listener_config" path="/${publish.path}"/>
+		<flow-ref doc:name="Flow Reference" doc:id="70ac36e6-7b82-45f9-9c17-752d50afbc14" name="comSub" />
+		<flow-ref doc:name="Flow Reference" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="postSub" />
+		<flow-ref doc:name="Flow Reference" doc:id="fcdffb16-0b66-4b53-b3d9-380760f5e1ac" name="userSub" />
+		<ee:transform doc:name="Transform Message" doc:id="5ec2bf6d-8c65-45ef-9082-d53029fa4cd6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+---
+ payload map(key,val)->{
+	"USER": 
+	{"id":key.id,
+	"name":key.name,
+	"username":key.username,
+	"email":key.email,
+	"street":key.street,
+	"suite":key.suite,
+	"city":key.city,
+	"zipcode":key.zipcode,
+	"geoLat":key.geoLat,
+	"geoLng":key.geoLng,
+	"phone":key.phone,
+	"website":key.website,
+	"companyName":key.companyName,
+	"companyCatchPhrase":key.companyCatchPhrase,
+	"companyBs":key.companyBs
+	
+},
+    "POSTS":{
+(vars.postsVar filter($.id==key.id) map (k,v)->
+		{
+			"id":k.id,
+			"title":k.title,
+			"body":k.body,
+			"userId":k.userId,			
+		}),
+		
+		"Comments":{
+			(vars.comVar filter($.id==key.id) map (k2,v2)->
+		{
+			"postId":k2.postId,
+			"id":k2.id,
+			"email":k2.email,
+			"body":k2.body,
+			"name":k2.name
+		}	
+)
+		}
+		
+		}
+		
+		
+		
+		}
+    	
+    	
+    ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<try doc:name="Try" doc:id="76eacfcc-7880-4ae5-b988-739be4fd8d44" >
+			<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="Queue.es.mule.users.posts" />
+			<logger level="INFO" doc:name="Logger" doc:id="d30a2fcb-0526-444c-b1fe-d00c0b9ca1cd" message=" Message Published " />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1ce6834d-3112-4efe-9388-ba4ee12f7abc" >
+					<logger level="INFO" doc:name="Logger" doc:id="1ded9f18-1786-401e-af16-ff6d89180874" message="Unable To Publish Payload On JMS"/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</flow>
+</mule>

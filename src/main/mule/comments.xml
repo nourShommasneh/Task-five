@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="comSub" doc:id="5b1c44d7-d4f7-4da6-8a9f-5e7dac47f319" >
+		<db:select doc:name="Select" doc:id="4127490c-a2b8-4db4-b705-77eb040cc754" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from comments;]]></db:sql>
+		</db:select>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="5c4c605b-6ba6-4b93-81ef-bd8302df647f" variableName="comVar" />
+	</sub-flow>
+	<flow name="commentsFlow" doc:id="03a83138-082e-4e69-828c-71e11f58d068" >
+		<http:listener doc:name="Listener" doc:id="db785db8-7903-48cc-8e94-d27140dff869" config-ref="HTTP_Listener_config" path="/${comments.path}"/>
+		<http:request method="GET" doc:name="Request" doc:id="dbd65a82-ee99-4ad5-bd4d-6dd813aa470b" config-ref="HTTP_Request_configuration" path="/${req.comments}"/>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="fe26df00-83e2-4d36-9d90-ce6055a97142" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
+		</db:bulk-insert>
+		<flow-ref doc:name="Flow Reference" doc:id="c1b17fd8-94a8-4f87-b634-a6c07330802a" name="comSub" />
+	</flow>
+</mule>

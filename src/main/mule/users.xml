@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="userSub" doc:id="bbc518cd-efd9-4dad-938b-afc8b46eea58" >
+		<db:select doc:name="Select" doc:id="1bb17b4c-ce1b-4ae2-8bd7-9794d41ce4d2" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from users;]]></db:sql>
+		</db:select>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="7e67b119-d70b-41c5-a484-6909063054e7" variableName="userVar" />
+	</sub-flow>
+	<flow name="usersFlow" doc:id="dec6a88d-61da-41c6-8913-c48cfb793082" >
+		<http:listener doc:name="Listener" doc:id="b2e520f0-3557-4677-b2f9-d6da88cb7e8e" config-ref="HTTP_Listener_config" path="/${users.path}"/>
+		<http:request method="GET" doc:name="Request" doc:id="67a7ce97-f53d-489f-968d-1f3313342a30" config-ref="HTTP_Request_configuration" path="/${req.users}"/>
+		<ee:transform doc:name="Transform Message" doc:id="a69ffaca-12cd-46d0-b1bd-c1ec37df4fa2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map
+{
+	
+	id:$.id,
+	name:$.name,
+	username:$.username,
+	email:$.email,
+
+	street:$.address.street,
+	suite:$.address.suite,
+	city:$.address.city,
+	zipcode:$.address.zipcode,
+	geoLat:$.address.geo.lat,
+	geoLng:$.address.geo.lng,
+	
+	
+	phone:$.phone,
+	website:$.website,
+	
+	companyName:$.company.name,
+	companyCatchPhrase:$.company.catchPhrase,
+	companyBs:$.company.bs
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="7a304a7d-a16e-4f94-a9c9-91bfe05caeca" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO social.users Values
+(:id,:name,:username,:email,:street,:suite,:city,:zipcode,:geoLat,:geoLng,:phone,:website,:companyName,:companyCatchPhrase,:companyBs);
+]]></db:sql>
+		</db:bulk-insert>
+		<flow-ref doc:name="Flow Reference" doc:id="fc12ac7e-1953-4a21-b0b0-f9e35529cd0c" name="userSub" />
+	</flow>
+</mule>
