@@ -5,18 +5,22 @@
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
-	<sub-flow name="postSub" doc:id="6fec2f24-0cd3-4fbe-b9b0-93b1252b10e3" >
-		<db:select doc:name="Select" doc:id="c1d405aa-1763-4231-b1d1-fd503eb7685e" config-ref="Database_Config">
-			<db:sql><![CDATA[select * from posts;]]></db:sql>
-		</db:select>
+	<sub-flow name="store-posts-payload" doc:id="bf1ed0e1-4073-460a-87e8-935ba28717d2" >
+		<db:bulk-insert doc:name="Bulk insert" doc:id="db0d505a-4639-4496-b967-e5eb8db461e3" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
+		</db:bulk-insert>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="2de105c0-9134-477f-bdc1-d605130e7a80" variableName="postsVar" />
 	</sub-flow>
 	<flow name="postsFlow" doc:id="7166494b-5eb8-47b7-aea6-8ff25c92bf55" >
 		<http:listener doc:name="Listener" doc:id="031a6ff4-4868-4580-9bfd-25c8d4cd27f3" config-ref="HTTP_Listener_config" path="/${posts.path}"/>
-		<http:request method="GET" doc:name="Request" doc:id="dd378c87-4249-41e3-8657-aac299f9d3d5" config-ref="HTTP_Request_configuration" path="/${req.posts}"/>
-		<db:bulk-insert doc:name="Bulk insert" doc:id="db0d505a-4639-4496-b967-e5eb8db461e3" config-ref="Database_Config">
-			<db:sql ><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
-		</db:bulk-insert>
-		<flow-ref doc:name="Flow Reference" doc:id="8098b424-cca4-4a22-99f5-96b317e39ba6" name="postSub" />
+		<try doc:name="Try" doc:id="8a6ba1ad-811a-4c6f-ac21-dc0c6456513f" >
+			<http:request method="GET" doc:name="Request" doc:id="dd378c87-4249-41e3-8657-aac299f9d3d5" config-ref="HTTP_Request_configuration" path="/${req.posts}" />
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" >
+					<logger level="INFO" doc:name="Logger" doc:id="82fa03be-dedb-414e-a7e8-5c839c38257a" message="Requsted API unavaliable "/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<flow-ref doc:name="Flow Reference" doc:id="0bd6e693-5aad-4a23-a1e0-1d09eca1af16" name="store-posts-payload" />
 	</flow>
 </mule>

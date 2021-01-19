@@ -6,18 +6,22 @@
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-	<sub-flow name="comSub" doc:id="5b1c44d7-d4f7-4da6-8a9f-5e7dac47f319" >
-		<db:select doc:name="Select" doc:id="4127490c-a2b8-4db4-b705-77eb040cc754" config-ref="Database_Config">
-			<db:sql><![CDATA[select * from comments;]]></db:sql>
-		</db:select>
+	<sub-flow name="store-comments-payload" doc:id="ac0f8fd2-9411-4fbb-9eca-88e792600d4e" >
+		<db:bulk-insert doc:name="Bulk insert" doc:id="fe26df00-83e2-4d36-9d90-ce6055a97142" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
+		</db:bulk-insert>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="5c4c605b-6ba6-4b93-81ef-bd8302df647f" variableName="comVar" />
 	</sub-flow>
 	<flow name="commentsFlow" doc:id="03a83138-082e-4e69-828c-71e11f58d068" >
 		<http:listener doc:name="Listener" doc:id="db785db8-7903-48cc-8e94-d27140dff869" config-ref="HTTP_Listener_config" path="/${comments.path}"/>
-		<http:request method="GET" doc:name="Request" doc:id="dbd65a82-ee99-4ad5-bd4d-6dd813aa470b" config-ref="HTTP_Request_configuration" path="/${req.comments}"/>
-		<db:bulk-insert doc:name="Bulk insert" doc:id="fe26df00-83e2-4d36-9d90-ce6055a97142" config-ref="Database_Config">
-			<db:sql ><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
-		</db:bulk-insert>
-		<flow-ref doc:name="Flow Reference" doc:id="c1b17fd8-94a8-4f87-b634-a6c07330802a" name="comSub" />
+		<try doc:name="Try" doc:id="b7907549-3c2f-4531-8535-70acee52edc0" >
+			<http:request method="GET" doc:name="Request" doc:id="dbd65a82-ee99-4ad5-bd4d-6dd813aa470b" config-ref="HTTP_Request_configuration" path="/${req.comments}" />
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="dfc700aa-1335-4e01-bb46-e07766ed8ece" >
+					<logger level="INFO" doc:name="Logger" doc:id="9788a548-0a4e-4143-bd58-0c782df88787" message="Requsted API unavaliable "/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<flow-ref doc:name="Flow Reference" doc:id="3e2f44cb-54fe-49b9-a9a3-c5bf2025eaa9" name="store-comments-payload" />
 	</flow>
 </mule>
