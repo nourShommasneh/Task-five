@@ -6,9 +6,9 @@
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	<sub-flow name="store-posts-payload" doc:id="bf1ed0e1-4073-460a-87e8-935ba28717d2" >
-		<db:bulk-insert doc:name="Bulk insert" doc:id="db0d505a-4639-4496-b967-e5eb8db461e3" config-ref="Database_Config">
-			<db:sql><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
-		</db:bulk-insert>
+		<db:select doc:name="Select" doc:id="1cc0cd78-e490-4120-bf38-fed25816ee8b" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from posts;]]></db:sql>
+		</db:select>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="2de105c0-9134-477f-bdc1-d605130e7a80" variableName="postsVar" />
 	</sub-flow>
 	<flow name="postsFlow" doc:id="7166494b-5eb8-47b7-aea6-8ff25c92bf55" >
@@ -21,6 +21,9 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 				</on-error-propagate>
 			</error-handler>
 		</try>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="db0d505a-4639-4496-b967-e5eb8db461e3" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
+		</db:bulk-insert>
 		<flow-ref doc:name="Flow Reference" doc:id="0bd6e693-5aad-4a23-a1e0-1d09eca1af16" name="store-posts-payload" />
 	</flow>
 </mule>

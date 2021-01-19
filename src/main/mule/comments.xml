@@ -7,9 +7,9 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<sub-flow name="store-comments-payload" doc:id="ac0f8fd2-9411-4fbb-9eca-88e792600d4e" >
-		<db:bulk-insert doc:name="Bulk insert" doc:id="fe26df00-83e2-4d36-9d90-ce6055a97142" config-ref="Database_Config">
-			<db:sql><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
-		</db:bulk-insert>
+		<db:select doc:name="Select" doc:id="dcb224a9-9540-4d4f-8406-adfdf3cdf834" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from comments;]]></db:sql>
+		</db:select>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="5c4c605b-6ba6-4b93-81ef-bd8302df647f" variableName="comVar" />
 	</sub-flow>
 	<flow name="commentsFlow" doc:id="03a83138-082e-4e69-828c-71e11f58d068" >
@@ -22,6 +22,9 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 				</on-error-propagate>
 			</error-handler>
 		</try>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="fe26df00-83e2-4d36-9d90-ce6055a97142" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
+		</db:bulk-insert>
 		<flow-ref doc:name="Flow Reference" doc:id="3e2f44cb-54fe-49b9-a9a3-c5bf2025eaa9" name="store-comments-payload" />
 	</flow>
 </mule>
