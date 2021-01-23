@@ -16,14 +16,25 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 		<try doc:name="Try" doc:id="8a6ba1ad-811a-4c6f-ac21-dc0c6456513f" >
 			<http:request method="GET" doc:name="Request" doc:id="dd378c87-4249-41e3-8657-aac299f9d3d5" config-ref="HTTP_Request_configuration" path="/${req.posts}" />
 			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" >
-					<logger level="INFO" doc:name="Logger" doc:id="82fa03be-dedb-414e-a7e8-5c839c38257a" message="Requsted API unavaliable "/>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" type="HTTP:CONNECTIVITY">
+					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="671fff26-d690-4b72-ac84-372f9e660a68" />
 				</on-error-propagate>
 			</error-handler>
 		</try>
-		<db:bulk-insert doc:name="Bulk insert" doc:id="db0d505a-4639-4496-b967-e5eb8db461e3" config-ref="Database_Config">
-			<db:sql><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
-		</db:bulk-insert>
-		<flow-ref doc:name="Flow Reference" doc:id="0bd6e693-5aad-4a23-a1e0-1d09eca1af16" name="store-posts-payload" />
+		<try doc:name="Try" doc:id="a524b341-7fd6-42f0-8b48-d75ff43c7eae" >
+			<foreach doc:name="For Each" doc:id="00795ad5-b0df-4b26-b3bd-7e016a12463f" >
+				<db:insert doc:name="Insert" doc:id="a57855b4-2940-4c5d-80cc-f8aee492d148" config-ref="Database_Config">
+					<db:sql ><![CDATA[insert into posts(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
+				</db:insert>
+			</foreach>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6e17d5b3-5000-46cf-8035-e1fc83e5175c" >
+					<set-payload value="Your Data Already Inserted , Or Check DB server if down " doc:name="Set Payload" doc:id="9c295e63-1f30-4236-85da-509467fcd4bc" />
+					<db:insert doc:name="Insert" doc:id="711f3bfc-017d-4055-a722-910a293ba6ec" config-ref="Database_Config">
+						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					</db:insert>
+				</on-error-continue>
+			</error-handler>
+		</try>
 	</flow>
 </mule>

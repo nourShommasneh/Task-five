@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="8c0dd362-f721-4ae2-b37a-0cf9721e58ff" >
 		<jms:active-mq-connection username="admin" password="admin" >
 			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
@@ -13,12 +14,33 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 	</jms:config>
 	<flow name="finalFlow" doc:id="82d6e1ea-ae09-4e3a-a476-2fd6dee106e8" >
 		<http:listener doc:name="Listener" doc:id="c79cdee3-803c-434a-976b-fa39508570ba" config-ref="HTTP_Listener_config" path="/${publish.path}"/>
-		<flow-ref doc:name="comments" doc:id="70ac36e6-7b82-45f9-9c17-752d50afbc14" name="store-comments-payload" />
-		<flow-ref doc:name="posts" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="store-posts-payload" />
-		<flow-ref doc:name="users" doc:id="fcdffb16-0b66-4b53-b3d9-380760f5e1ac" name="store-users-payload" />
-		<ee:transform doc:name="Transform Message" doc:id="5ec2bf6d-8c65-45ef-9082-d53029fa4cd6" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<try doc:name="Try" doc:id="0a007bda-2733-4a21-b699-406b31b13c87" >
+			<flow-ref doc:name="comments" doc:id="70ac36e6-7b82-45f9-9c17-752d50afbc14" name="store-comments-payload" />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="242b4267-71d5-4612-83f7-1b323101e375" >
+					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="1bc2f687-f1f2-460a-85a2-01b00d59e492" />
+					<db:insert doc:name="Insert" doc:id="dc21b627-80ec-49a5-be04-0865d1f9ea3d" config-ref="Database_Config">
+						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					</db:insert>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="bf7e67f8-d6e9-4bc5-9db3-f2072db6f1e4" >
+			<flow-ref doc:name="posts" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="store-posts-payload" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="ad0c0da2-bcd9-4a70-b383-f79f7b1f961a" >
+					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="79a7e2b9-43bf-4971-bdc0-2a17ae2cb5b8" />
+					<db:insert doc:name="Insert" doc:id="15b517db-1ccf-4a14-a8da-2eafda01cebb" config-ref="Database_Config">
+						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					</db:insert>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="578877a2-88ee-4b8c-8025-7852b9cc9815" >
+			<flow-ref doc:name="users" doc:id="fcdffb16-0b66-4b53-b3d9-380760f5e1ac" name="store-users-payload" />
+			<ee:transform doc:name="Transform Message" doc:id="5ec2bf6d-8c65-45ef-9082-d53029fa4cd6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 
 ---
@@ -42,16 +64,14 @@ output application/json
 	
 },
     "POSTS":{
-(vars.postsVar filter($.id==key.id) map (k,v)->
+(vars.postsVar filter($.userId==key.id) map (k,v)->
 		{
 			"id":k.id,
 			"title":k.title,
 			"body":k.body,
-			"userId":k.userId,			
-		}),
-		
-		"Comments":{
-			(vars.comVar filter($.id==key.id) map (k2,v2)->
+			"userId":k.userId,
+			"comments":{
+				(vars.comVar filter($.postId==k.id) map (k2,v2)->
 		{
 			"postId":k2.postId,
 			"id":k2.id,
@@ -60,26 +80,47 @@ output application/json
 			"name":k2.name
 		}	
 )
+				
+			}
+			
 		}
 		
-		}
+		)
 		
 		
+		}	
 		
-		}
+		
+}
     	
     	
     ]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<try doc:name="Try" doc:id="76eacfcc-7880-4ae5-b988-739be4fd8d44" >
-			<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="Queue.es.mule.users.posts" />
-			<logger level="INFO" doc:name="Logger" doc:id="d30a2fcb-0526-444c-b1fe-d00c0b9ca1cd" message=" Message Published " />
-			<error-handler>
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1ce6834d-3112-4efe-9388-ba4ee12f7abc" >
-					<logger level="INFO" doc:name="Logger" doc:id="1ded9f18-1786-401e-af16-ff6d89180874" message="Unable To Publish Payload On JMS . . Server down "/>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="98be38fc-7491-4884-be69-f7ea6022b0fb" >
+					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="7c0eda90-83f9-4250-b528-f3c8c34696a1" />
+					<db:insert doc:name="Insert" doc:id="b18d3970-2940-42ee-a43c-9568b10ebadc" config-ref="Database_Config">
+						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					</db:insert>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="f1361474-fab8-4c53-913f-577be9ffaa52" >
+			<foreach doc:name="For Each" doc:id="cf5cc4e4-f0db-46ce-b1bc-c774846c7865">
+			<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="${active.queue}" />
+				<set-payload value="Message Published" doc:name="Set Payload" doc:id="cd3b560e-604c-4e92-b380-ec05383823bb" />
+		</foreach>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d92e2de6-ad56-400c-a731-019a8d68f5be" >
+					<set-payload value="Unable to Publish Message " doc:name="Set Payload" doc:id="08cd14a1-d43b-404c-9847-5eac5a554fc0" />
 				</on-error-continue>
 			</error-handler>
 		</try>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cf33b890-4d69-4195-9514-54e7aeae57ff" >
+				<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="7394e290-4a19-47f6-9203-8c5fdbf1e340" />
+			</on-error-propagate>
+		</error-handler>
 	</flow>
 </mule>

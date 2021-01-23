@@ -14,17 +14,11 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	</sub-flow>
 	<flow name="usersFlow" doc:id="dec6a88d-61da-41c6-8913-c48cfb793082" >
 		<http:listener doc:name="Listener" doc:id="b2e520f0-3557-4677-b2f9-d6da88cb7e8e" config-ref="HTTP_Listener_config" path="/${users.path}"/>
-		<try doc:name="Try" doc:id="3d3cea74-9daf-4d37-983c-99f12f9fc9e1" >
+		<try doc:name="Try" doc:id="dd109f40-74ab-4d92-b68d-6e22c4a10223" >
 			<http:request method="GET" doc:name="Request" doc:id="67a7ce97-f53d-489f-968d-1f3313342a30" config-ref="HTTP_Request_configuration" path="/${req.users}" />
-			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1a0cbfc9-26d3-40b0-bacc-d53fe3eb408a" >
-					<logger level="INFO" doc:name="Logger" doc:id="153e4d44-60c8-4ea9-8c54-2d829cef4325" message="Requsted API unavaliable "/>
-				</on-error-propagate>
-			</error-handler>
-		</try>
-		<ee:transform doc:name="Transform Message" doc:id="a69ffaca-12cd-46d0-b1bd-c1ec37df4fa2" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+			<ee:transform doc:name="Transform Message" doc:id="a69ffaca-12cd-46d0-b1bd-c1ec37df4fa2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 payload map
@@ -53,11 +47,33 @@ payload map
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<db:bulk-insert doc:name="Bulk insert" doc:id="7a304a7d-a16e-4f94-a9c9-91bfe05caeca" config-ref="Database_Config">
-			<db:sql><![CDATA[INSERT INTO social.users Values
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="facf9be7-99ea-483a-9eb4-784f3930592b" >
+					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="f4407127-074c-45ef-a5bc-d870fb97ac8f" />
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="3d3cea74-9daf-4d37-983c-99f12f9fc9e1" >
+			<foreach doc:name="For Each" doc:id="5bb0dd5f-89b4-4c28-a8f7-675a6c2a6ea5" >
+				<db:insert doc:name="Insert" doc:id="db61c044-c71b-4aab-8097-e37c6941be06" config-ref="Database_Config">
+					<db:sql ><![CDATA[INSERT INTO social.users Values
 (:id,:name,:username,:email,:street,:suite,:city,:zipcode,:geoLat,:geoLng,:phone,:website,:companyName,:companyCatchPhrase,:companyBs);
 ]]></db:sql>
-		</db:bulk-insert>
-		<flow-ref doc:name="Flow Reference" doc:id="7ccf51be-15eb-4669-b5c0-cf3edeb00d4f" name="store-users-payload" />
+				</db:insert>
+			</foreach>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="9d746374-efb6-4a17-8de2-a72f9f9481d8" >
+					<set-payload value="Your Data Already Inserted , no need to call /users Listener .. Duplicate entry  for key 'PRIMARY'&quot;" doc:name="Set Payload" doc:id="ea1cd425-66f1-4d53-a8b9-483ebc05f5c8" />
+					<db:insert doc:name="Insert" doc:id="19d9857d-2f38-431a-abab-fd035dd2674e" config-ref="Database_Config">
+						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					</db:insert>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="155d8050-e2f7-454e-ba3e-e86b49eb053f" >
+				<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="afb3b978-98cb-47f5-8109-e6199c558f33" />
+			</on-error-propagate>
+		</error-handler>
 	</flow>
 </mule>
