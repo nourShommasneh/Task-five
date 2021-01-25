@@ -43,7 +43,7 @@ time:payload."Time Occured"
 		<try doc:name="Try" doc:id="5caae0f5-1bd4-4f92-845d-0e04ab06abdc" >
 			<foreach doc:name="For Each" doc:id="78d7835a-c55f-4b03-95b5-b121066a5146" >
 				<db:insert doc:name="Insert" doc:id="2006f20d-f532-4656-afe5-e585d61f181b" config-ref="Database_Config">
-					<db:sql ><![CDATA[insert into comment values(:postId,:id,:name,:email,:body);]]></db:sql>
+					<db:sql ><![CDATA[insert into comment values(:id,:postId,:name,:email,:body);]]></db:sql>
 					<db:input-parameters ><![CDATA[#[{
 postId:payload.postId,
 id:payload.id,
@@ -54,10 +54,10 @@ body:payload.body
 				</db:insert>
 			</foreach>
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="fc1f2872-9e04-4de5-970f-2f144eca189e" >
-					<ee:transform doc:name="Error Description" doc:id="59ad5ff5-5b5b-46aa-bb51-b148fa4adf46" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="0fb010de-522a-40e3-8973-83da28a2cb81" >
+					<ee:transform doc:name="Error Description" doc:id="59ad5ff5-5b5b-46aa-bb51-b148fa4adf46">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -67,14 +67,14 @@ output application/json
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="48d37482-ff5c-43ac-aba8-94423dcdabc2" config-ref="Database_Config" >
-						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-						<db:input-parameters ><![CDATA[#[{
+					<db:insert doc:name="Insert Errors to Table" doc:id="48d37482-ff5c-43ac-aba8-94423dcdabc2" config-ref="Database_Config">
+						<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
 Error_Description:payload.Error_Description,
 time:payload."Time Occured"
 }]]]></db:input-parameters>
 					</db:insert>
-				</on-error-continue>
+				</on-error-propagate>
 			</error-handler>
 		</try>
 		<error-handler >

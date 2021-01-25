@@ -16,7 +16,6 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 		<http:listener doc:name="Listener" doc:id="c79cdee3-803c-434a-976b-fa39508570ba" config-ref="HTTP_Listener_config" path="/${publish.path}"/>
 		<try doc:name="Try" doc:id="0a007bda-2733-4a21-b699-406b31b13c87" >
 			<flow-ref doc:name="comments" doc:id="70ac36e6-7b82-45f9-9c17-752d50afbc14" name="store-comments-payload" />
-			<flow-ref doc:name="posts" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="store-posts-payload" />
 			<error-handler>
 				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="242b4267-71d5-4612-83f7-1b323101e375" >
 					<ee:transform doc:name="Error Description" doc:id="c236dce8-b6cc-4ab5-a126-31d5d982e25b" >
@@ -32,6 +31,32 @@ output application/json
 						</ee:message>
 					</ee:transform>
 					<db:insert doc:name="Insert Errors to Table" doc:id="7e657e27-3a66-4da4-8fc6-60afb534ab85" config-ref="Database_Config" >
+						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+Error_Description:payload.Error_Description,
+time:payload."Time Occured"
+}]]]></db:input-parameters>
+					</db:insert>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="f3d6d5ff-8939-4089-b250-1c50112bbea3" >
+			<flow-ref doc:name="posts" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="store-posts-payload" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="34afc707-d1bb-44b8-8e60-aa49f4024c2a" >
+					<ee:transform doc:name="Error Description" doc:id="ebd8ca8b-b731-4b8e-b504-073d0228a163" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Error_Description":error.description,
+	"Time Occured": now()
+	
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<db:insert doc:name="Insert Errors to Table" doc:id="8f2d388c-c23a-4a7b-8fc0-ffac4847849a" config-ref="Database_Config" >
 						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
 						<db:input-parameters ><![CDATA[#[{
 Error_Description:payload.Error_Description,
@@ -132,10 +157,10 @@ time:payload."Time Occured"
 				<set-payload value="Message Published" doc:name="Set Payload" doc:id="cd3b560e-604c-4e92-b380-ec05383823bb" />
 		</foreach>
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d92e2de6-ad56-400c-a731-019a8d68f5be" >
-					<ee:transform doc:name="Error Description" doc:id="3fefa3fa-eb62-4e39-9b5c-f02d1d9ea73d" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="46e8ee73-fd21-4bcb-a001-186896edc6e1" >
+					<ee:transform doc:name="Error Description" doc:id="3fefa3fa-eb62-4e39-9b5c-f02d1d9ea73d">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -145,14 +170,14 @@ output application/json
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="a21ea1dd-56c9-40f6-ac01-d1179f4d1c18" config-ref="Database_Config" >
-						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-						<db:input-parameters ><![CDATA[#[{
+					<db:insert doc:name="Insert Errors to Table" doc:id="a21ea1dd-56c9-40f6-ac01-d1179f4d1c18" config-ref="Database_Config">
+						<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
 Error_Description:payload.Error_Description,
 time:payload."Time Occured"
 }]]]></db:input-parameters>
 					</db:insert>
-				</on-error-continue>
+				</on-error-propagate>
 			</error-handler>
 		</try>
 		<error-handler>

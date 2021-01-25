@@ -98,10 +98,10 @@ city:payload.city
 				</db:insert>
 			</foreach>
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="9d746374-efb6-4a17-8de2-a72f9f9481d8" type="ANY">
-					<ee:transform doc:name="Error Description" doc:id="36dd2c26-2f78-4cce-b7c4-6861a7aea5e5" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="aea1f1bc-6512-47c5-aa0c-629b48567be6" >
+					<ee:transform doc:name="Error Description" doc:id="36dd2c26-2f78-4cce-b7c4-6861a7aea5e5">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -111,14 +111,14 @@ output application/json
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="fb77bea4-e073-44a5-84a7-de96306b5bf8" config-ref="Database_Config" >
-						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-						<db:input-parameters ><![CDATA[#[{
+					<db:insert doc:name="Insert Errors to Table" doc:id="fb77bea4-e073-44a5-84a7-de96306b5bf8" config-ref="Database_Config">
+						<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
 Error_Description:payload.Error_Description,
 time:payload."Time Occured"
 }]]]></db:input-parameters>
 					</db:insert>
-				</on-error-continue>
+				</on-error-propagate>
 			</error-handler>
 		</try>
 		<error-handler >
