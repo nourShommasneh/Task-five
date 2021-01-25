@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<sub-flow name="store-comments-payload" doc:id="ac0f8fd2-9411-4fbb-9eca-88e792600d4e" >
 		<db:select doc:name="Select" doc:id="dcb224a9-9540-4d4f-8406-adfdf3cdf834" config-ref="Database_Config">
-			<db:sql ><![CDATA[select * from comments;]]></db:sql>
+			<db:sql ><![CDATA[select * from comment;]]></db:sql>
 		</db:select>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="5c4c605b-6ba6-4b93-81ef-bd8302df647f" variableName="comVar" />
 	</sub-flow>
@@ -18,24 +18,87 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<http:request method="GET" doc:name="Request" doc:id="dbd65a82-ee99-4ad5-bd4d-6dd813aa470b" config-ref="HTTP_Request_configuration" path="/${req.comments}" />
 			<error-handler >
 				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="dfc700aa-1335-4e01-bb46-e07766ed8ece" type="ANY">
-					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="05aed2ae-456a-4812-af9a-0ba5d77fb9d8" />
+					<ee:transform doc:name="Error Description" doc:id="a457f671-d6c2-42d4-89db-178241d1200d" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Error_Description":error.description,
+	"Time Occured": now()
+	
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<db:insert doc:name="Insert Errors to Table" doc:id="1e3879a6-8175-4df7-9218-644b8fa6b7e9" config-ref="Database_Config" >
+						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+Error_Description:payload.Error_Description,
+time:payload."Time Occured"
+}]]]></db:input-parameters>
+					</db:insert>
 				</on-error-propagate>
 			</error-handler>
 		</try>
 		<try doc:name="Try" doc:id="5caae0f5-1bd4-4f92-845d-0e04ab06abdc" >
 			<foreach doc:name="For Each" doc:id="78d7835a-c55f-4b03-95b5-b121066a5146" >
 				<db:insert doc:name="Insert" doc:id="2006f20d-f532-4656-afe5-e585d61f181b" config-ref="Database_Config">
-					<db:sql ><![CDATA[insert into comments(postId,id,name,email,body) values(:postId,:id,:name,:email,:body);]]></db:sql>
+					<db:sql ><![CDATA[insert into comment values(:postId,:id,:name,:email,:body);]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+postId:payload.postId,
+id:payload.id,
+name:payload.name,
+email:payload.email,
+body:payload.body
+}]]]></db:input-parameters>
 				</db:insert>
 			</foreach>
 			<error-handler >
 				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="fc1f2872-9e04-4de5-970f-2f144eca189e" >
-					<set-payload value="#[error.description]" doc:name="Set Payload" doc:id="69d9305c-31af-4d10-aa6b-9aa640801061" />
-					<db:insert doc:name="Insert" doc:id="8470a06b-b005-4a13-8a88-82ea5165130f" config-ref="Database_Config">
-						<db:sql ><![CDATA[insert values into errors;]]></db:sql>
+					<ee:transform doc:name="Error Description" doc:id="59ad5ff5-5b5b-46aa-bb51-b148fa4adf46" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Error_Description":error.description,
+	"Time Occured": now()
+	
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<db:insert doc:name="Insert Errors to Table" doc:id="48d37482-ff5c-43ac-aba8-94423dcdabc2" config-ref="Database_Config" >
+						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+						<db:input-parameters ><![CDATA[#[{
+Error_Description:payload.Error_Description,
+time:payload."Time Occured"
+}]]]></db:input-parameters>
 					</db:insert>
 				</on-error-continue>
 			</error-handler>
 		</try>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bd62b7a0-c269-4ee9-aed6-50d4b6e3a941" >
+				<ee:transform doc:name="Error Description" doc:id="5ce11761-936c-4577-b070-b66e6d35924a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Error_Description":error.description,
+	"Time Occured": now()
+	
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<db:insert doc:name="Insert Errors to Table" doc:id="95943e95-e419-4885-aac1-16c49c2b8eec" config-ref="Database_Config" >
+					<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+Error_Description:payload.Error_Description,
+time:payload."Time Occured"
+}]]]></db:input-parameters>
+				</db:insert>
+			</on-error-propagate>
+		</error-handler>
 	</flow>
 </mule>
