@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
 	<sub-flow name="store-posts-payload" doc:id="bf1ed0e1-4073-460a-87e8-935ba28717d2" >
 		<db:select doc:name="Select" doc:id="1cc0cd78-e490-4120-bf38-fed25816ee8b" config-ref="Database_Config">
 			<db:sql><![CDATA[select * from post;]]></db:sql>
@@ -16,6 +17,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		<http:listener doc:name="Listener" doc:id="031a6ff4-4868-4580-9bfd-25c8d4cd27f3" config-ref="HTTP_Listener_config" path="/${posts.path}"/>
 		<try doc:name="Try" doc:id="8a6ba1ad-811a-4c6f-ac21-dc0c6456513f" >
 			<http:request method="GET" doc:name="Request" doc:id="dd378c87-4249-41e3-8657-aac299f9d3d5" config-ref="HTTP_Request_configuration" path="/${req.posts}" />
+			<set-variable value="#[payload]" doc:name="backup-payload-posts" doc:id="e2e008b3-ae8c-46d7-ac80-0e8cecc5bdb0" variableName="backuppayloadposts"/>
 			<error-handler >
 				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" type="HTTP:CONNECTIVITY">
 					<ee:transform doc:name="Error Description" doc:id="db9d8551-f609-4858-8550-78793e6e41ab" >
@@ -40,11 +42,11 @@ time:payload."Time Occured"
 				</on-error-propagate>
 			</error-handler>
 		</try>
-		<try doc:name="Try" doc:id="a524b341-7fd6-42f0-8b48-d75ff43c7eae" >
-			<foreach doc:name="For Each" doc:id="00795ad5-b0df-4b26-b3bd-7e016a12463f" >
-				<db:insert doc:name="Insert" doc:id="a57855b4-2940-4c5d-80cc-f8aee492d148" config-ref="Database_Config">
-					<db:sql ><![CDATA[insert into post(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
+		<foreach doc:name="For Each" doc:id="00795ad5-b0df-4b26-b3bd-7e016a12463f">
+				<try doc:name="Try" doc:id="c54376c0-5315-4f19-a45f-e460b178ac19">
+					<db:insert doc:name="Insert" doc:id="a57855b4-2940-4c5d-80cc-f8aee492d148" config-ref="Database_Config">
+					<db:sql><![CDATA[insert into post(userId,id,title,body) values(:userId,:id,:title,:body);]]></db:sql>
+					<db:input-parameters><![CDATA[#[{
 	userId:payload.userId,
 	id:payload.id,
 	title:payload.title,
@@ -53,36 +55,11 @@ time:payload."Time Occured"
 	
 }]]]></db:input-parameters>
 				</db:insert>
-			</foreach>
-			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="012447f8-d560-4879-8561-3c1bb65e2754" >
-					<ee:transform doc:name="Error Description" doc:id="d5f85697-4c6f-47f5-aa1e-483f60bc10f6">
-						<ee:message>
-							<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	"Error_Description":error.description,
-	"Time Occured": now()
-	
-}]]></ee:set-payload>
-						</ee:message>
-					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="c9f6f344-0e71-4934-8bc0-ea8ee7c45134" config-ref="Database_Config">
-						<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-						<db:input-parameters><![CDATA[#[{
-Error_Description:payload.Error_Description,
-time:payload."Time Occured"
-}]]]></db:input-parameters>
-					</db:insert>
-				</on-error-propagate>
-			</error-handler>
-		</try>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="63dff5c8-8272-4e24-913e-b9a2909d57d6" >
-				<ee:transform doc:name="Error Description" doc:id="57487490-4f9b-4321-a51b-aa4b2de658e1" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="800696fc-97c9-4ede-8d80-72070e386937" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
+						<ee:transform doc:name="Error Description" doc:id="57487490-4f9b-4321-a51b-aa4b2de658e1">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -92,14 +69,27 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
-				<db:insert doc:name="Insert Errors to Table" doc:id="a8a0c2ba-0586-4574-ae25-54b1ec12297a" config-ref="Database_Config" >
-					<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
+						<db:insert doc:name="Insert Errors to Table" doc:id="a8a0c2ba-0586-4574-ae25-54b1ec12297a" config-ref="Database_Config">
+					<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+					<db:input-parameters><![CDATA[#[{
 Error_Description:payload.Error_Description,
 time:payload."Time Occured"
 }]]]></db:input-parameters>
 				</db:insert>
-			</on-error-propagate>
-		</error-handler>
+					</on-error-continue>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b58e62bd-0d11-4ef6-a8a9-39bd4af95f82" type="DB:CONNECTIVITY">
+						<ee:transform doc:name="Payload to Q" doc:id="a9554264-22ab-4a24-8f41-42d2621cd4b3" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.backuppayloadposts]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<jms:publish doc:name="Publish Payload" doc:id="83573982-5d2e-4cdc-97d4-b84ff134e448" config-ref="JMS_Config" destination="${queue.comments}" />
+					</on-error-propagate>
+				</error-handler>
+				</try>
+			</foreach>
 	</flow>
 </mule>

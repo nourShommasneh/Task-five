@@ -17,7 +17,7 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 		<try doc:name="Try" doc:id="0a007bda-2733-4a21-b699-406b31b13c87" >
 			<flow-ref doc:name="comments" doc:id="70ac36e6-7b82-45f9-9c17-752d50afbc14" name="store-comments-payload" />
 			<error-handler>
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="242b4267-71d5-4612-83f7-1b323101e375" >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="242b4267-71d5-4612-83f7-1b323101e375" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
 					<ee:transform doc:name="Error Description" doc:id="c236dce8-b6cc-4ab5-a126-31d5d982e25b" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
@@ -43,7 +43,7 @@ time:payload."Time Occured"
 		<try doc:name="Try" doc:id="f3d6d5ff-8939-4089-b250-1c50112bbea3" >
 			<flow-ref doc:name="posts" doc:id="6c8c70ac-5bf8-434a-8f30-6f1729d6e147" name="store-posts-payload" />
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="34afc707-d1bb-44b8-8e60-aa49f4024c2a" >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="34afc707-d1bb-44b8-8e60-aa49f4024c2a" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, JMS:CONNECTIVITY, JMS:DESTINATION_NOT_FOUND, JMS:ILLEGAL_BODY, JMS:PUBLISHING, JMS:RETRY_EXHAUSTED, JMS:SECURITY, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
 					<ee:transform doc:name="Error Description" doc:id="ebd8ca8b-b731-4b8e-b504-073d0228a163" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
@@ -74,7 +74,7 @@ time:payload."Time Occured"
 output application/json
 
 ---
- payload map(key,val)->{
+ payload default [] map(key,val)->{
 	"USER": 
 	{"id":key.id,
 	"name":key.name,
@@ -93,14 +93,14 @@ output application/json
 	"companyBs":key.companyBs
 	
 },
-    "POSTS":{
+    "POSTS":
 (vars.postsVar filter($.userId==key.id) map (k,v)->
 		{
 			"id":k.id,
 			"title":k.title,
 			"body":k.body,
 			"userId":k.userId,
-			"comments":{
+			"comments":
 				(vars.comVar filter($.postId==k.id) map (k2,v2)->
 		{
 			"postId":k2.postId,
@@ -111,14 +111,14 @@ output application/json
 		}	
 )
 				
-			}
+			
 			
 		}
 		
 		)
 		
 		
-		}	
+			
 		
 		
 }
@@ -128,8 +128,8 @@ output application/json
 			</ee:message>
 		</ee:transform>
 			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="98be38fc-7491-4884-be69-f7ea6022b0fb" >
-					<ee:transform doc:name="Error Description" doc:id="7ee66ba4-f52b-4f13-9a79-ba1f81cacdbe" >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a7dc80c1-e77b-486c-80b0-73709789f230" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
+					<ee:transform doc:name="Error Description" doc:id="82bbc866-992a-476b-942c-8b8168afd747" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -141,7 +141,7 @@ output application/json
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="e7e96ab3-83b8-4d56-af9f-7d13303e6dbe" config-ref="Database_Config" >
+					<db:insert doc:name="Insert Errors to Table" doc:id="119e3658-84b4-4651-978c-f508480933f1" config-ref="Database_Config" >
 						<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
 						<db:input-parameters ><![CDATA[#[{
 Error_Description:payload.Error_Description,
@@ -151,16 +151,14 @@ time:payload."Time Occured"
 				</on-error-propagate>
 			</error-handler>
 		</try>
-		<try doc:name="Try" doc:id="f1361474-fab8-4c53-913f-577be9ffaa52" >
-			<foreach doc:name="For Each" doc:id="cf5cc4e4-f0db-46ce-b1bc-c774846c7865">
-			<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="${active.queue}" />
-				<set-payload value="Message Published" doc:name="Set Payload" doc:id="cd3b560e-604c-4e92-b380-ec05383823bb" />
-		</foreach>
-			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="46e8ee73-fd21-4bcb-a001-186896edc6e1" >
-					<ee:transform doc:name="Error Description" doc:id="3fefa3fa-eb62-4e39-9b5c-f02d1d9ea73d">
-						<ee:message>
-							<ee:set-payload><![CDATA[%dw 2.0
+		<foreach doc:name="For Each" doc:id="cf5cc4e4-f0db-46ce-b1bc-c774846c7865">
+				<try doc:name="Try" doc:id="252477a5-9840-4923-85f7-ec4591b8e238">
+					<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="${main.queue}" />
+				<error-handler>
+					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="02f22156-2354-427c-b1a1-fbe64013a4f9" type="JMS:CONNECTIVITY">
+						<ee:transform doc:name="Transform Message" doc:id="a7ddd703-0271-4d25-bd66-f5e7096f8d55" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -168,21 +166,44 @@ output application/json
 	"Time Occured": now()
 	
 }]]></ee:set-payload>
-						</ee:message>
-					</ee:transform>
-					<db:insert doc:name="Insert Errors to Table" doc:id="a21ea1dd-56c9-40f6-ac01-d1179f4d1c18" config-ref="Database_Config">
-						<db:sql><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-						<db:input-parameters><![CDATA[#[{
+							</ee:message>
+						</ee:transform>
+						<db:insert doc:name="Insert Errors to Table" doc:id="4535dad3-cbee-4f3a-a64c-52697c305e3f" config-ref="Database_Config" >
+							<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+							<db:input-parameters ><![CDATA[#[{
 Error_Description:payload.Error_Description,
 time:payload."Time Occured"
 }]]]></db:input-parameters>
-					</db:insert>
-				</on-error-propagate>
-			</error-handler>
-		</try>
-		<error-handler>
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cf33b890-4d69-4195-9514-54e7aeae57ff" >
-				<ee:transform doc:name="Error Description" doc:id="a2b02a1d-450c-442c-bfc3-f0b54ed15c7f" >
+						</db:insert>
+					</on-error-propagate>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="928b1bf8-e0d0-47fd-8da5-a8b9e3c63df8" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, JMS:DESTINATION_NOT_FOUND, JMS:ILLEGAL_BODY, JMS:PUBLISHING, JMS:RETRY_EXHAUSTED, JMS:SECURITY, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
+						<ee:transform doc:name="Transform Message" doc:id="4b1723f5-1b16-4480-9937-1f59916141e5" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Error_Description":error.description,
+	"Time Occured": now()
+	
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<db:insert doc:name="Insert Errors to Table" doc:id="de1158cb-0af8-48eb-a5bc-56f50458fed3" config-ref="Database_Config" >
+							<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
+							<db:input-parameters ><![CDATA[#[{
+Error_Description:payload.Error_Description,
+time:payload."Time Occured"
+}]]]></db:input-parameters>
+						</db:insert>
+					</on-error-continue>
+				</error-handler>
+				</try>
+		</foreach>
+		<set-payload value="Message Published" doc:name="Set Payload" doc:id="cd3b560e-604c-4e92-b380-ec05383823bb" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1d97fbed-f33a-4c17-9408-e610ef3d7e83" type="DB:CONNECTIVITY" >
+				<ee:transform doc:name="ErrorDescription" doc:id="bfab1d3e-5083-42da-bf9e-b3294ea870d4" >
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -194,13 +215,7 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
-				<db:insert doc:name="Insert Errors to Table" doc:id="667558b3-7c9b-4c0d-bc25-4815cb99490d" config-ref="Database_Config" >
-					<db:sql ><![CDATA[insert into error values(:Error_Description,:time);]]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
-Error_Description:payload.Error_Description,
-time:payload."Time Occured"
-}]]]></db:input-parameters>
-				</db:insert>
+				<jms:publish doc:name="Publish Error" doc:id="733b2138-6573-41d2-99da-7c9a00d9e879" config-ref="JMS_Config" destination="${queue.Errors}" />
 			</on-error-propagate>
 		</error-handler>
 	</flow>
