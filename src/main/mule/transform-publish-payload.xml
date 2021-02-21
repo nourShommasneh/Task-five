@@ -7,11 +7,6 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
-	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="8c0dd362-f721-4ae2-b37a-0cf9721e58ff" >
-		<jms:active-mq-connection username="admin" password="admin" >
-			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
-		</jms:active-mq-connection>
-	</jms:config>
 	<flow name="finalFlow" doc:id="82d6e1ea-ae09-4e3a-a476-2fd6dee106e8" >
 		<http:listener doc:name="Listener" doc:id="c79cdee3-803c-434a-976b-fa39508570ba" config-ref="HTTP_Listener_config" path="/${publish.path}"/>
 		<try doc:name="Try" doc:id="0a007bda-2733-4a21-b699-406b31b13c87" >
@@ -153,7 +148,7 @@ time:payload."Time Occured"
 		</try>
 		<foreach doc:name="For Each" doc:id="cf5cc4e4-f0db-46ce-b1bc-c774846c7865">
 				<try doc:name="Try" doc:id="252477a5-9840-4923-85f7-ec4591b8e238">
-					<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" config-ref="JMS_Config" destination="${main.queue}" />
+					<jms:publish doc:name="Publish" doc:id="30a2f685-adfc-4235-a007-f25186957841" destination="${main.queue}" />
 				<error-handler>
 					<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="02f22156-2354-427c-b1a1-fbe64013a4f9" type="JMS:CONNECTIVITY">
 						<ee:transform doc:name="Transform Message" doc:id="a7ddd703-0271-4d25-bd66-f5e7096f8d55" >
@@ -176,7 +171,7 @@ time:payload."Time Occured"
 }]]]></db:input-parameters>
 						</db:insert>
 					</on-error-propagate>
-					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="928b1bf8-e0d0-47fd-8da5-a8b9e3c63df8" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, JMS:DESTINATION_NOT_FOUND, JMS:ILLEGAL_BODY, JMS:PUBLISHING, JMS:RETRY_EXHAUSTED, JMS:SECURITY, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="928b1bf8-e0d0-47fd-8da5-a8b9e3c63df8" type="JMS:DESTINATION_NOT_FOUND, JMS:ILLEGAL_BODY, JMS:PUBLISHING, JMS:RETRY_EXHAUSTED, JMS:SECURITY, EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED">
 						<ee:transform doc:name="Transform Message" doc:id="4b1723f5-1b16-4480-9937-1f59916141e5" >
 							<ee:message >
 								<ee:set-payload ><![CDATA[%dw 2.0
@@ -215,7 +210,7 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
-				<jms:publish doc:name="Publish Error" doc:id="733b2138-6573-41d2-99da-7c9a00d9e879" config-ref="JMS_Config" destination="${queue.Errors}" />
+				<jms:publish doc:name="Publish Error" doc:id="733b2138-6573-41d2-99da-7c9a00d9e879" destination="${queue.Errors}" config-ref="JMS_Config"/>
 			</on-error-propagate>
 		</error-handler>
 	</flow>

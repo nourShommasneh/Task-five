@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0a6f3895-772e-4e13-bfd1-36eee3f6815e" >
 		<http:listener-connection host="${http.host}" port="${http.port}" >
 			<reconnection >
@@ -21,7 +22,14 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 			<reconnection >
 				<reconnect/>
 			</reconnection>
-			<db:pooling-profile maxPoolSize="${max.pool.size}" minPoolSize="${min.pool.size}" maxWait="${max.await}" preparedStatementCacheSize="${cache.size}" maxIdleTime="${max.idle.time}"/>
+			<db:pooling-profile maxPoolSize="${max.pool.size}" maxWait="20000" preparedStatementCacheSize="1000" maxWaitUnit="MILLISECONDS"/>
 		</db:my-sql-connection>
 	</db:config>
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="27c9fed7-62f5-4603-b283-54cdaca767e2" >
+		<jms:active-mq-connection username="${jms.username}" password="${jms.password}" >
+			<reconnection >
+				<reconnect />
+			</reconnection>
+		</jms:active-mq-connection>
+	</jms:config>
 </mule>

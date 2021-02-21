@@ -19,7 +19,7 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 			<http:request method="GET" doc:name="Request" doc:id="dd378c87-4249-41e3-8657-aac299f9d3d5" config-ref="HTTP_Request_configuration" path="/${req.posts}" />
 			<set-variable value="#[payload]" doc:name="backup-payload-posts" doc:id="e2e008b3-ae8c-46d7-ac80-0e8cecc5bdb0" variableName="backuppayloadposts"/>
 			<error-handler >
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" type="HTTP:CONNECTIVITY">
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5a0bb415-152e-40bd-8f5e-01d4942f9a98" type="ANY">
 					<ee:transform doc:name="Error Description" doc:id="db9d8551-f609-4858-8550-78793e6e41ab" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
@@ -86,7 +86,7 @@ output application/json
 vars.backuppayloadposts]]></ee:set-payload>
 							</ee:message>
 						</ee:transform>
-						<jms:publish doc:name="Publish Payload" doc:id="83573982-5d2e-4cdc-97d4-b84ff134e448" config-ref="JMS_Config" destination="${queue.comments}" />
+						<jms:publish doc:name="Publish Payload" doc:id="83573982-5d2e-4cdc-97d4-b84ff134e448" destination="${queue.comments}" />
 					</on-error-propagate>
 				</error-handler>
 				</try>

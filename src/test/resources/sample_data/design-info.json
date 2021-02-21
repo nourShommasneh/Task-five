@@ -1,0 +1,14 @@
+{
+  "sampleData": {
+    "5ec2bf6d-8c65-45ef-9082-d53029fa4cd6": {
+      "vars-userVar": "sample_data/list_java_3.dwl",
+      "payload": "sample_data/list_java_2.dwl",
+      "vars-postsVar": "sample_data/list_java_4.dwl",
+      "vars-comVar": "sample_data/list_java_5.dwl"
+    },
+    "1a98a503-6dff-46fc-b6e8-d0213315014f": {
+      "vars-userVar": "sample_data/list_java_1.dwl",
+      "payload": "sample_data/list_java.dwl"
+    }
+  }
+}
